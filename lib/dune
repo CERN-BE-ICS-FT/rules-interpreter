@@ -1,0 +1,7 @@
+(library
+ (name rules_component)
+ (libraries 
+  grpc-lwt 
+  lwt 
+  ocaml-protoc-plugin
+  greeter))
