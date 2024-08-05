@@ -1,8 +1,9 @@
 open Grpc_lwt
+open Lwt.Syntax
+open Ocaml_protoc_plugin
+open Rules.Rules
 
 let run_rules buffer =
-  let open Ocaml_protoc_plugin in
-  let open Rules.Rules in
   let decode, encode = Service.make_service_functions RulesService.runRules in
   let request =
     Reader.create buffer |> decode |> function
@@ -28,8 +29,7 @@ let server =
 
 
 let () =
-  let open Lwt.Syntax in
-  let port = 8081 in
+  let port = 8080 in
   let listen_address = Unix.(ADDR_INET (inet_addr_loopback, port)) in
   Lwt.async (fun () ->
       let server =

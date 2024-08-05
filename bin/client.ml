@@ -1,11 +1,7 @@
-(* $MDX part-begin=client-imports *)
 open Grpc_lwt
 open Lwt.Syntax
-(* $MDX part-end *)
 
-(* $MDX part-begin=client-hello *)
 let call_server address port req =
-  (* Setup Http/2 connection *)
   let* addresses =
     Lwt_unix.getaddrinfo address (string_of_int port)
       [ Unix.(AI_FAMILY PF_INET) ]
@@ -43,7 +39,7 @@ let call_server address port req =
 (* $MDX part-begin=client-main *)
 let () =
   let open Lwt.Syntax in
-  let port = 8081 in
+  let port = 8080 in
   let address = "localhost" in
   let context = if Array.length Sys.argv > 1 then Sys.argv.(1) else "anonymous" in
   let open Rules.Rules in
