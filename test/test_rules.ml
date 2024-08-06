@@ -1,5 +1,3 @@
-open Rules_component
-
 let read_file path =
   In_channel.input_all (In_channel.open_text path)
 
@@ -15,15 +13,15 @@ let () =
   let context_str = read_file (Sys.argv.(2)) in
   
   (* Parse rules and context *)
-  let rules = parse_rules rules_str in
-  let context = parse_context context_str in
+  let rules = Rules.Parser.parse_rules rules_str in
+  let context = Context.parse_context context_str in
 
   (* Show rules and context *)
-  print_endline (show_rules rules);
-  print_endline (show_context context);
+  print_endline (Rules.Show.show_rules rules);
+  print_endline (Context.show_context context);
 
   (* Apply rules *)
-  let res_opt = apply_rules rules context in
+  let res_opt = Rules.Interpreter.eval_rules rules context in
   match res_opt with
     | Some res -> Printf.printf "%d\n" res
     | None -> print_endline "No change."

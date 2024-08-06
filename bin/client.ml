@@ -15,7 +15,7 @@ let call_server address port req =
 
   (* code generation *)
   let open Ocaml_protoc_plugin in
-  let open Rules.Rules in
+  let open Rules_service.Rules in
   let encode, decode = Service.make_client_functions RulesService.runRules in
   let enc = encode req |> Writer.contents in
 
@@ -42,7 +42,7 @@ let () =
   let port = 8080 in
   let address = "localhost" in
   let context = if Array.length Sys.argv > 1 then Sys.argv.(1) else "anonymous" in
-  let open Rules.Rules in
+  let open Rules_service.Rules in
   let req = RulesService.RunRules.Request.make ~context () in
   Lwt_main.run
     (let+ res = call_server address port req in

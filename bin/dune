@@ -7,7 +7,7 @@
   ocaml-protoc-plugin
   lwt
   lwt.unix
-  rules
+  rules_service
   h2
   h2-lwt-unix))
 
@@ -20,6 +20,6 @@
   ocaml-protoc-plugin
   lwt
   lwt.unix
-  rules
+  rules_service
   h2
   h2-lwt-unix))

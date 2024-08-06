@@ -1,7 +1,7 @@
 open Grpc_lwt
 open Lwt.Syntax
 open Ocaml_protoc_plugin
-open Rules.Rules
+open Rules_service.Rules
 
 let run_rules buffer =
   let decode, encode = Service.make_service_functions RulesService.runRules in

@@ -1,3 +1,9 @@
 (library
- (name rules_component)
+ (name context)
+ (modules context)
  (libraries yojson))
+
+(library
+ (name rules)
+ (modules rules)
+ (libraries context yojson))
