@@ -1,15 +1,29 @@
 open Rules_component
 
-let () =
-  let c = {
-    vars = [2; 2; 0];
-    current_state = 1;
-  } in
-  let rules = parse_rules "rules.json" in
-  print_endline (show_rules rules);
-  print_endline (show_context c);
+let read_file path =
+  In_channel.input_all (In_channel.open_text path)
 
-  let res = apply_rules rules c in
-  match res with
-    | Some x -> Printf.printf "%d\n" x 
-    | None -> print_endline "Nothing"
+let () =
+  (* Argv validation *)
+  let argc = Array.length Sys.argv in
+  if argc != 3 then
+    print_endline "Usage: ./test.exe <rules.json> <context.json>"
+  else
+  
+  (* Read rules and context as strings *)
+  let rules_str = read_file (Sys.argv.(1)) in
+  let context_str = read_file (Sys.argv.(2)) in
+  
+  (* Parse rules and context *)
+  let rules = parse_rules rules_str in
+  let context = parse_context context_str in
+
+  (* Show rules and context *)
+  print_endline (show_rules rules);
+  print_endline (show_context context);
+
+  (* Apply rules *)
+  let res_opt = apply_rules rules context in
+  match res_opt with
+    | Some res -> Printf.printf "%d\n" res
+    | None -> print_endline "No change."
