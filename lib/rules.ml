@@ -1,10 +1,10 @@
 type target = C
 
 type 'a predicate = 
-  | PredEQ of 'a
-  | PredNEQ of 'a
-  | PredGT of 'a 
-  | PredLT of 'a
+  | EQ of 'a
+  | NEQ of 'a
+  | GT of 'a 
+  | LT of 'a
 
 type 'a prop_formula =
   | AndPF of 'a prop_formula list
@@ -34,10 +34,10 @@ module Show = struct
     | C -> "C"
 
   let show_pred = function
-    | (PredEQ x)  -> " == " ^ (string_of_int x)
-    | (PredNEQ x) -> " != " ^ (string_of_int x)
-    | (PredLT x)  -> " < "  ^ (string_of_int x)
-    | (PredGT x)  -> " > "  ^ (string_of_int x)
+    | (EQ x)  -> " == " ^ (string_of_int x)
+    | (NEQ x) -> " != " ^ (string_of_int x)
+    | (LT x)  -> " < "  ^ (string_of_int x)
+    | (GT x)  -> " > "  ^ (string_of_int x)
 
   let rec intercalate element = function
     | []      -> []
@@ -80,46 +80,47 @@ end
 module Interpreter : sig
   val eval_rules : 'a rules_list -> 'a Context.context -> 'a option
 end = struct
+  open List
   type 'a context = 'a Context.context
+
+  (* Unpack all 'some' values in a list *)
+  let only_some xs =
+    map Option.get (filter Option.is_some xs)
 
   let get_target t (c : 'a context) = 
     match t with
       | C -> c.current_state
 
   let eval_pred = function
-    | (PredEQ x)  -> (=) x
-    | (PredNEQ x) -> (!=) x
-    | (PredLT x)  -> (>) x
-    | (PredGT x)  -> (<) x
+    | (EQ x)  -> (=)  x
+    | (NEQ x) -> (!=) x
+    | (LT x)  -> (>)  x
+    | (GT x)  -> (<)  x
 
   let rec eval_prop_formula = function
-    | (AndPF fs) -> fun x ->
-        List.for_all (fun f -> (eval_prop_formula f) x) fs
-    | (OrPF fs) -> fun x ->
-        List.exists (fun f -> (eval_prop_formula f) x) fs 
-    | (Px p) -> eval_pred p
+    | (AndPF fs) -> fun x -> for_all (fun f -> (eval_prop_formula f) x) fs
+    | (OrPF fs)  -> fun x -> exists  (fun f -> (eval_prop_formula f) x) fs 
+    | (Px p)     -> eval_pred p
 
   let eval_quant_formula (c : 'a context) = function
-    | (Forall pf) -> List.for_all (eval_prop_formula pf) c.vars
-    | (Exists pf) -> List.exists (eval_prop_formula pf) c.vars
+    | (Forall pf) -> for_all (eval_prop_formula pf) c.vars
+    | (Exists pf) -> exists  (eval_prop_formula pf) c.vars
 
   let rec eval_formula c = function
-    | (AndF fs)  -> List.for_all (eval_formula c) fs
-    | (OrF fs)   -> List.exists  (eval_formula c) fs
+    | (AndF fs)  -> for_all (eval_formula c) fs
+    | (OrF fs)   -> exists  (eval_formula c) fs
     | (QF q)     -> eval_quant_formula c q
     | (Pt (t,p)) -> eval_pred p (get_target t c)
 
   let eval_prop c prop =
-    if eval_formula c (prop.formula) then 
+    if eval_formula c (prop.formula) = true then 
       Some (prop.resulting_state)
     else
       None
 
-  (* Applies all the rules to a given context *)
   let eval_rules (RulesList rules) context =
-    let open List in
     let results = map (eval_prop context) rules in
-    try Some (hd (flatten (map Option.to_list results))) with
+    try Some (hd (only_some results)) with
       Failure _ -> None
 end
 
@@ -138,10 +139,10 @@ end = struct
     let op = p |> member "op" |> to_string in
     let arg = p |> member "arg" |> to_int in
     match op with
-      | "==" -> PredEQ arg
-      | "!=" -> PredNEQ arg
-      | ">"  -> PredGT arg
-      | "<"  -> PredLT arg
+      | "==" -> EQ arg
+      | "!=" -> NEQ arg
+      | ">"  -> GT arg
+      | "<"  -> LT arg
       | _    -> failwith "Could not parse predicate." 
 
   let rec parse_prop_formula f =
