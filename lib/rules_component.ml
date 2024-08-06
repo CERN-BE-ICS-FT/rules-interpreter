@@ -205,9 +205,8 @@ let parse_prop p =
   let resulting_state = p |> member "resultingState" |> to_int in
   { formula; resulting_state }
 
-let parse_rules path = 
-  (* Read JSON file into string *)
-  let json = Yojson.Basic.from_file path in
+let parse_rules input = 
+  let json = Yojson.Basic.from_string input in
   let rules = json |> member "propositions" 
                    |> to_list 
                    |> List.map parse_prop in
@@ -219,5 +218,5 @@ let parse_context input =
                   |> to_list 
                   |> List.map to_int
   in
-  let current_state = json |> member "current_state" |> to_int in
+  let current_state = json |> member "currentState" |> to_int in
   { vars; current_state }
