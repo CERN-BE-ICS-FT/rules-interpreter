@@ -1,11 +1,15 @@
 open Rules_component
 
 let () =
-  (* let p1 = AndPF [Px (PredEQ 3); Px (PredNEQ 3)] in
-  let p2 = p1 in
-  let f = AndF [QF (Forall p1); QF (Exists p2)] in *)
   let c = {
-    vars = [1; 2; 3];
-    currentState = 10;
+    vars = [2; 2; 0];
+    current_state = 1;
   } in
-  Printf.printf "%s\n" (show_context c)
+  let rules = parse_rules "rules.json" in
+  print_endline (show_rules rules);
+  print_endline (show_context c);
+
+  let res = apply_rules rules c in
+  match res with
+    | Some x -> Printf.printf "%d\n" x 
+    | None -> print_endline "Nothing"

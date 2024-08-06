@@ -1,2 +1,3 @@
 (library
- (name rules_component))
+ (name rules_component)
+ (libraries yojson))
