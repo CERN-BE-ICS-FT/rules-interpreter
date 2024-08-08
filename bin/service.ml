@@ -3,8 +3,14 @@ open Lwt.Syntax
 open Ocaml_protoc_plugin
 open Rules_service.Rules
 
-let run_rules buffer =
-  let decode, encode = Service.make_service_functions RulesService.runRules in
+let run_rules request =
+  if request = "" then "You forgot your name!"
+  else Format.sprintf "Hello, %s!" request
+
+(* Binds a normal function to an RPC *)
+let lift_rpc rpc_name func = function buffer ->
+  (* Decode the request *)
+  let decode, encode = Service.make_service_functions rpc_name in
   let request =
     Reader.create buffer |> decode |> function
     | Ok v -> v
@@ -12,21 +18,21 @@ let run_rules buffer =
         failwith
           (Printf.sprintf "Could not decode request: %s" (Result.show_error e))
   in
-  let result =
-    if request = "" then "You forgot your name!"
-    else Format.sprintf "Hello, %s!" request
-  in
+  (* Execute the central function *)
+  let result = func request in
+  (* Make the reply *)
   let reply = RulesService.RunRules.Response.make ~result () in
   Lwt.return (Grpc.Status.(v OK), Some (encode reply |> Writer.contents))
 
+let run_rules_rpc = lift_rpc RulesService.runRules run_rules
+
 let rules_service =
   Server.Service.(
-    v () |> add_rpc ~name:"RunRules" ~rpc:(Unary run_rules) |> handle_request)
+    v () |> add_rpc ~name:"RunRules" ~rpc:(Unary run_rules_rpc) |> handle_request)
 
 let server =
   Server.(
-    v () |> add_service ~name:"rules-service" ~service:rules_service)
-
+    v () |> add_service ~name:"rules_service" ~service:rules_service)
 
 let () =
   let port = 8080 in

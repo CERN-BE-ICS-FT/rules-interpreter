@@ -19,7 +19,9 @@ let call_server address port req =
   let encode, decode = Service.make_client_functions RulesService.runRules in
   let enc = encode req |> Writer.contents in
 
-  Client.call ~service:"rules-service" ~rpc:"RunRules"
+  Client.call 
+    ~service:"rules-service" 
+    ~rpc:"RunRules"
     ~do_request:(H2_lwt_unix.Client.request connection ~error_handler:ignore)
     ~handler:
       (Client.Rpc.unary enc ~f:(fun decoder ->
@@ -34,11 +36,16 @@ let call_server address port req =
                         (Result.show_error e)))
            | None -> RulesService.RunRules.Response.make ()))
     ()
-(* $MDX part-end *)
 
-(* $MDX part-begin=client-main *)
+let handle_result = function
+  | Ok (res, _) -> 
+      print_endline res
+  | Error x -> 
+      let open H2 in
+      print_endline (Status.to_string x); 
+      print_endline "an error occurred"
+
 let () =
-  let open Lwt.Syntax in
   let port = 8080 in
   let address = "localhost" in
   let context = if Array.length Sys.argv > 1 then Sys.argv.(1) else "anonymous" in
@@ -46,10 +53,4 @@ let () =
   let req = RulesService.RunRules.Request.make ~context () in
   Lwt_main.run
     (let+ res = call_server address port req in
-     match res with
-     | Ok (res, _) -> print_endline res
-     | Error x -> 
-        let open H2 in
-        print_endline (Status.to_string x); 
-        print_endline "an error occurred")
-(* $MDX part-end *)
+     handle_result res)
