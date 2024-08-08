@@ -1,34 +1,48 @@
 open Grpc_lwt
 open Lwt.Syntax
 open Ocaml_protoc_plugin
-open Rules_service.Rules
+open Rules_grpc
 
-let run_rules request =
-  if request = "" then "You forgot your name!"
-  else Format.sprintf "Hello, %s!" request
+let compute_root_node (request:ComputeRootNodeRequest.t) = 
+  request.currentState
 
-(* Binds a normal function to an RPC *)
-let lift_rpc rpc_name func = function buffer ->
-  (* Decode the request *)
-  let decode, encode = Service.make_service_functions rpc_name in
-  let request =
-    Reader.create buffer |> decode |> function
-    | Ok v -> v
-    | Error e ->
-        failwith
-          (Printf.sprintf "Could not decode request: %s" (Result.show_error e))
-  in
-  (* Execute the central function *)
-  let result = func request in
-  (* Make the reply *)
-  let reply = RulesService.RunRules.Response.make ~result () in
-  Lwt.return (Grpc.Status.(v OK), Some (encode reply |> Writer.contents))
+let set_rules (request:SetRulesRequest.t) = 
+  let rules = request in
+  if rules = "hello" then 69 else 96
 
-let run_rules_rpc = lift_rpc RulesService.runRules run_rules
+(* Decodes a grpc request into actual data *)
+let decode_request decode buffer =
+  Reader.create buffer |> decode |> function
+  | Ok v -> v
+  | Error e ->
+      failwith
+        (Printf.sprintf "Could not decode request: %s" (Result.show_error e))
+
+(* Returns an encoded reply *)
+let make_reply encoded_reply = 
+  Lwt.return (Grpc.Status.(v OK), Some (encoded_reply |> Writer.contents))
+
+(* RPC for compute root node *)
+let compute_root_node_rpc = function buffer ->
+  let decode, encode = Service.make_service_functions RulesService.computeRootNode in
+  let request = decode_request decode buffer in
+  let result = compute_root_node request in
+  let reply = RulesService.ComputeRootNode.Response.make ~result () in
+  make_reply (encode reply)
+
+(* RPC for set rules *)
+let set_rules_rpc = function buffer ->
+  let decode, encode = Service.make_service_functions RulesService.setRules in
+  let request = decode_request decode buffer in
+  let statusCode = set_rules request in
+  let reply = RulesService.SetRules.Response.make ~statusCode () in
+  make_reply (encode reply)
 
 let rules_service =
   Server.Service.(
-    v () |> add_rpc ~name:"RunRules" ~rpc:(Unary run_rules_rpc) |> handle_request)
+    v () |> add_rpc ~name:"ComputeRootNode" ~rpc:(Unary compute_root_node_rpc)
+         |> add_rpc ~name:"SetRules" ~rpc:(Unary set_rules_rpc)
+         |> handle_request)
 
 let server =
   Server.(

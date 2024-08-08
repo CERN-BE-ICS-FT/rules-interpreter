@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+service RulesService {
+    rpc ComputeRootNode (ComputeRootNodeRequest) returns (ComputeRootNodeResponse);
+    rpc SetRules (SetRulesRequest) returns (SetRulesResponse);
+}
+
+message ComputeRootNodeRequest {
+    repeated int32 childrenStates = 1;
+    int32 currentState = 2;
+}
+
+message ComputeRootNodeResponse {
+    int32 result = 1;
+}
+
+message SetRulesRequest {
+    string rules = 1;
+}
+
+message SetRulesResponse {
+    int32 statusCode = 1;
+}

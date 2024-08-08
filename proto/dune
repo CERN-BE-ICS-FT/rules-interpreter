@@ -1,11 +1,11 @@
 (library
- (name rules_service)
+ (name rules_grpc)
  (libraries ocaml-protoc-plugin))
 
 (rule
- (targets rules_service.ml)
+ (targets rules_grpc.ml)
  (deps
-  (:proto rules_service.proto))
+  (:proto rules_grpc.proto))
  (action
   (run
    protoc
