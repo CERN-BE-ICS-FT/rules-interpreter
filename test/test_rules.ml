@@ -13,15 +13,18 @@ let () =
   let context_str = read_file (Sys.argv.(2)) in
   
   (* Parse rules and context *)
-  let rules = Rules.Parser.parse_rules rules_str in
-  let context = Context.parse_context context_str in
+  let rules_res = Rules.Parser.parse_rules rules_str in
+  match rules_res with
+  | Error e -> print_endline e
+  | Ok rules ->
+      let context = Context.parse_context context_str in
 
-  (* Show rules and context *)
-  print_endline (Rules.Show.show_rules rules);
-  print_endline (Context.show_context context);
+      (* Show rules and context *)
+      print_endline (Rules.Show.show_rules rules);
+      print_endline (Context.show_context context);
 
-  (* Apply rules *)
-  let res_opt = Rules.Interpreter.eval_rules rules context in
-  match res_opt with
-    | Some res -> Printf.printf "%d\n" res
-    | None -> print_endline "No change."
+      (* Apply rules *)
+      let res_opt = Rules.Interpreter.eval_rules rules context in
+      match res_opt with
+        | Some res -> Printf.printf "%d\n" res
+        | None -> print_endline "No change."

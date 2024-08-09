@@ -22,5 +22,6 @@
   lwt
   lwt.unix
   rules_grpc
+  rules
   h2
   h2-lwt-unix))

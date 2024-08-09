@@ -1,7 +1,7 @@
 type target = C
 
 type 'a predicate = 
-  | EQ of 'a
+  | EQ of 'a 
   | NEQ of 'a
   | GT of 'a 
   | LT of 'a
@@ -126,80 +126,116 @@ end
 
 (* Parses rules from json *)
 module Parser : sig 
-  val parse_rules : string -> int rules_list
+  val parse_rules : string -> (int rules_list, string) result
 end = struct
   open Yojson.Basic.Util
 
+  (* Define monadic let notation for 'result' *)
+  let return v = Ok v
+  let (let*) o f =
+    match o with
+    | Ok v -> (f v)
+    | Error e -> Error e
+  
+  let fold_res xs = 
+    List.fold_right (fun v acc ->
+      let* a = acc in
+      let* x = v in
+      return (x :: a)
+    ) 
+    xs (return [])
+
   let parse_target t =
     match t with
-      | "C" -> C
-      | _   -> failwith "Could not parse target."
+      | "C" -> return C
+      | _   -> Error "Could not parse target."
 
   let parse_pred p =
     let op = p |> member "op" |> to_string in
     let arg = p |> member "arg" |> to_int in
     match op with
-      | "==" -> EQ arg
-      | "!=" -> NEQ arg
-      | ">"  -> GT arg
-      | "<"  -> LT arg
-      | _    -> failwith "Could not parse predicate." 
+      | "==" -> return (EQ arg)
+      | "!=" -> return (NEQ arg)
+      | ">"  -> return (GT arg)
+      | "<"  -> return (LT arg)
+      | _    -> Error "Could not parse predicate." 
 
   let rec parse_prop_formula f =
     let op_option = f |> member "op" |> to_string_option in
     match op_option with
       | Some op -> 
-          let fs = f |> member "formulas" 
+          let* fs = f |> member "formulas" 
                      |> to_list
                      |> List.map parse_prop_formula
+                     |> fold_res
           in
           (match op with
-            | "AND" -> AndPF fs
-            | "OR"  -> OrPF fs
-            | _     -> failwith "Could not parse prop formula logical op.")
+            | "AND" -> return (AndPF fs)
+            | "OR"  -> return (OrPF fs)
+            | _     -> Error "Could not parse prop formula logical op.")
       | None ->
-          let pred = f |> member "predicate" |> parse_pred in
-          Px (pred)
+          let* pred = f |> member "predicate" |> parse_pred in
+          return (Px (pred))
 
   let parse_quant_formula f =
     let quantifier = f |> member "quantifier" |> to_string in
-    let prop_formula = f |> member "propFormula" |> parse_prop_formula in
+    let* prop_formula = f |> member "propFormula" |> parse_prop_formula in
     match quantifier with
-      | "forall" -> Forall prop_formula
-      | "exists" -> Exists prop_formula
-      | _        -> failwith "Could not parse quantifier."
-
+      | "forall" -> return (Forall prop_formula)
+      | "exists" -> return (Exists prop_formula)
+      | _        -> Error "Could not parse quantifier."
 
   let rec parse_formula f = 
     let op_option = f |> member "op" |> to_string_option in
     match op_option with
       | Some op -> 
-          let fs = f |> member "formulas"
+          let* fs = f |> member "formulas"
                      |> to_list 
                      |> List.map (fun f' -> parse_formula f') 
+                     |> fold_res
           in
           (match op with
-            | "AND" -> AndF fs
-            | "OR"  -> OrF fs
-            | _     -> failwith "Could not parse formula logical op.")
+            | "AND" -> return (AndF fs)
+            | "OR"  -> return (OrF fs)
+            | _     -> Error "Could not parse formula logical op.")
       | None ->
           let pred_option = f |> member "predicate" |> to_option (fun x -> x) in
           match pred_option with
             | Some pred ->
                 let t = f |> member "target" |> to_string in
-                Pt (parse_target t, parse_pred pred)
+                let* target = parse_target t in
+                let* predicate = parse_pred pred in
+                return (Pt (target, predicate))
             | None -> 
-                QF (parse_quant_formula f) 
+                let* qf = parse_quant_formula f in
+                return (QF qf)
 
   let parse_prop p =
-    let formula = p |> member "formula" |> parse_formula in
+    let* formula = p |> member "formula" |> parse_formula in
     let resulting_state = p |> member "resultingState" |> to_int in
-    { formula; resulting_state }
+    return { formula; resulting_state }
 
-  let parse_rules input = 
+
+  let _parse_rules input = 
     let json = Yojson.Basic.from_string input in
-    let rules = json |> member "propositions" 
+    let* rules = json |> member "propositions" 
                      |> to_list 
-                     |> List.map parse_prop in
-    RulesList rules
+                     |> List.map parse_prop
+                     |> fold_res
+    in
+    return (RulesList rules)
+
+  let parse_rules input =
+    try _parse_rules input with
+      _ -> Error "An error occured while parsing JSON."
 end
+
+(*
+(>>=) :: Either a String -> (a -> Either b String) -> Either b String
+(>>=) val f = case val of
+  Left x -> Left (f x)
+  Right s -> Right s
+
+f :: [Either Int String] -> Either [Int] String
+f xs = foldl (\acc v -> acc >>= (\a -> v >>= \v' -> Left (acc ++ v'))) (Left []) xs
+*)
