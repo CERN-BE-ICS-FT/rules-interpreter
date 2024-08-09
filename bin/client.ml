@@ -46,8 +46,8 @@ let set_rules_rpc ~connection ~rules =
   let encode, decode = Service.make_client_functions RulesService.setRules in
   let enc = encode req |> Writer.contents in
   Client.call 
-    ~service:"rules-service" 
-    ~rpc:"RunRules"
+    ~service:"rules_service" 
+    ~rpc:"SetRules"
     ~do_request:(H2_lwt_unix.Client.request connection ~error_handler:ignore)
     ~handler:
       (Client.Rpc.unary enc ~f:(fun decoder ->
