@@ -1,27 +1,3 @@
 (executable
- (name client)
- (modules client)
- (flags (:standard -annot))
- (libraries
-  grpc
-  grpc-lwt
-  ocaml-protoc-plugin
-  lwt
-  lwt.unix
-  rules_grpc
-  h2
-  h2-lwt-unix))
-
-(executable
- (name service)
- (modules service)
- (libraries
-  grpc
-  grpc-lwt
-  ocaml-protoc-plugin
-  lwt
-  lwt.unix
-  rules_grpc
-  rules
-  h2
-  h2-lwt-unix))
+ (name rules_interpreter)
+ (libraries rules context))
