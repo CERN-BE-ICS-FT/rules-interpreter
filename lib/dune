@@ -7,8 +7,3 @@
  (name rules)
  (modules rules)
  (libraries context yojson))
-
-(library
- (name rules_exp)
- (modules rules_exp)
- (libraries context yojson))
