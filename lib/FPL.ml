@@ -1,3 +1,6 @@
+(* Note: FPL stands for Fancy Propositional Logic  
+- it has wild quantifiers, but it reduces to propositional logic *)
+
 type target = C
 
 type 'a predicate = 
@@ -14,6 +17,9 @@ type 'a prop_formula =
 type 'a quant_formula =
   | Forall of 'a prop_formula
   | Exists of 'a prop_formula
+  | AtLeast of int * 'a prop_formula
+  | AtMost of int * 'a prop_formula
+  | Exactly of int  * 'a prop_formula
 
 type 'a formula =
   | AndF of 'a formula list
@@ -53,9 +59,13 @@ module Show = struct
                     "(" ^ String.concat "" ored ^ ")"
     | (Px pred)  -> "x" ^ show_pred pred
 
-  let show_quant_formula = function
+  let show_quant_formula qf = 
+    match qf with
     | (Forall pf) -> "(∀x. " ^ show_prop_formula pf ^ ")"
     | (Exists pf) -> "(∃x. " ^ show_prop_formula pf ^ ")"
+    | (Exactly (n,pf)) -> "(∃=" ^ string_of_int n ^ "x. " ^ show_prop_formula pf ^ ")"
+    | (AtLeast (n,pf)) -> "(∃>" ^ string_of_int n ^ "x. " ^ show_prop_formula pf ^ ")"
+    | (AtMost (n,pf)) -> "(∃<" ^ string_of_int n ^ "x. " ^ show_prop_formula pf ^ ")"
 
   let rec show_formula = function 
     | (AndF fs) -> let showed = List.map show_formula fs in
@@ -76,41 +86,58 @@ module Show = struct
     String.concat "\n" (List.map show_prop props)
 end
 
+module Compiler = struct
+  let pred_to_hoas = function
+    | EQ x -> (HOAS.EQ, x)
+    | NEQ x -> (HOAS.NEQ, x)
+    | GT x -> (HOAS.GT, x)
+    | LT x -> (HOAS.LT, x)
+
+  let rec prop_formula_to_hoas (f : 'a prop_formula) x = 
+    match f with
+    | AndPF fs -> HOAS.And (List.map (fun f -> prop_formula_to_hoas f x) fs)
+    | OrPF fs  -> HOAS.Or (List.map (fun f -> prop_formula_to_hoas f x) fs)
+    | Px p     -> 
+        let (pred, value) = pred_to_hoas p in 
+        HOAS.P (x, pred, HOAS.Val value)
+
+  let rec qf_to_hoas (qf: 'a quant_formula) =
+    let open HOAS in
+    match qf with
+    | Forall f -> Forall (Whole, prop_formula_to_hoas f)
+    | Exists f -> Exists (Whole, prop_formula_to_hoas f)
+    | AtLeast (n,f) -> 
+        let set_predicate s = P (sizeof s, EQ, Val n) in
+        ExistsSet (fun set -> And [set_predicate set; Forall(set, prop_formula_to_hoas f)])
+    | AtMost (n,f) -> 
+        let set_predicate s = P (sizeof s, EQ, Val (n + 1)) in
+        ForallSet (fun set -> Implies (set_predicate set, Exists(set, fun x -> Not (prop_formula_to_hoas f x))))
+    | Exactly (n,f) ->
+        formula_to_hoas (AndF [QF (AtLeast (n,f)); QF (AtMost (n,f))])
+
+  and formula_to_hoas f =
+    match f with
+    | AndF fs -> HOAS.And (List.map formula_to_hoas fs)
+    | OrF  fs -> HOAS.Or (List.map formula_to_hoas fs)
+    | QF   qf -> qf_to_hoas qf 
+    | Pt (_,p)-> 
+        let (pred,value) = pred_to_hoas p in
+        HOAS.P (HOAS.C, pred, HOAS.Val value)
+end
+
 (* Interpreter submodule *)
 module Interpreter : sig
-  val eval_rules : 'a rules_list -> 'a Context.context -> 'a option
+  val eval_rules : int rules_list -> int Context.context -> int option
 end = struct
   open List
-  type 'a context = 'a Context.context
 
   (* Unpack all 'some' values in a list *)
   let only_some xs =
     map Option.get (filter Option.is_some xs)
 
-  let get_target t (c : 'a context) = 
-    match t with
-      | C -> c.current_state
-
-  let eval_pred = function
-    | (EQ x)  -> (=)  x
-    | (NEQ x) -> (!=) x
-    | (LT x)  -> (>)  x
-    | (GT x)  -> (<)  x
-
-  let rec eval_prop_formula = function
-    | (AndPF fs) -> fun x -> for_all (fun f -> (eval_prop_formula f) x) fs
-    | (OrPF fs)  -> fun x -> exists  (fun f -> (eval_prop_formula f) x) fs 
-    | (Px p)     -> eval_pred p
-
-  let eval_quant_formula (c : 'a context) = function
-    | (Forall pf) -> for_all (eval_prop_formula pf) c.vars
-    | (Exists pf) -> exists  (eval_prop_formula pf) c.vars
-
-  let rec eval_formula c = function
-    | (AndF fs)  -> for_all (eval_formula c) fs
-    | (OrF fs)   -> exists  (eval_formula c) fs
-    | (QF q)     -> eval_quant_formula c q
-    | (Pt (t,p)) -> eval_pred p (get_target t c)
+  let eval_formula c f =
+    let compiled = Compiler.formula_to_hoas f in
+    HOAS.eval_formula c compiled
 
   let eval_prop c prop =
     if eval_formula c (prop.formula) = true then 

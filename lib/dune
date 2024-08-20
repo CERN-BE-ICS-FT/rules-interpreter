@@ -4,6 +4,11 @@
  (libraries yojson))
 
 (library
- (name rules)
- (modules rules)
+ (name FPL)
+ (modules FPL)
+ (libraries HOAS context yojson))
+
+(library
+ (name HOAS)
+ (modules HOAS)
  (libraries context yojson))
