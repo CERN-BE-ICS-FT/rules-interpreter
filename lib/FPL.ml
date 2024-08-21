@@ -210,7 +210,14 @@ end = struct
     match quantifier with
       | "forall" -> return (Forall prop_formula)
       | "exists" -> return (Exists prop_formula)
-      | _        -> Error "Could not parse quantifier."
+      | _ ->
+        let n = f |> member "quantifierExtra" |> to_int in
+        (match quantifier with
+        | "at least" -> return (AtLeast (n,prop_formula))
+        | "at most" -> return (AtMost (n,prop_formula))
+        | "exactly" -> return (Exactly (n,prop_formula))
+        | _ -> Error "Could not parse quantifier."
+        )
 
   let rec parse_formula f = 
     let op_option = f |> member "op" |> to_string_option in
