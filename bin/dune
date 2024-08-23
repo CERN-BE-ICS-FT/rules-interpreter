@@ -1,3 +1,7 @@
 (executable
  (name rules_interpreter)
  (libraries FPL context))
+
+(executable
+ (name rules_display)
+ (libraries FPL context))
