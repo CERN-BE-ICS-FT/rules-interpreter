@@ -1,0 +1,42 @@
+{
+    "propositions": [
+        {
+            "resultingState": 3,
+            "formula": {
+                "op": "AND",
+                "formulas": [
+                    {
+                        "op": "OR",
+                        "formulas": [
+                            {
+                                "target": "C",
+                                "predicate": {
+                                    "op": "==",
+                                    "arg": 1
+                                }
+                            },
+                            {
+                                "quantifier": "exists",
+                                "propFormula": {
+                                    "predicate": {
+                                        "op": "==",
+                                        "arg": 1
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "quantifier": "forall",
+                        "propFormula": {
+                            "predicate": {
+                                "op": "<",
+                                "arg": 4
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
